@@ -5,11 +5,14 @@
     FastMock framework, mock your FastAPI APIs
 </p>
 <p align="center">
-<a href="https://github.com/tpemeja/fastmock/workflows/Test/badge.svg" target="_blank">
+<a href="https://github.com/tpemeja/fastmock/actions/workflows/test.yml" target="_blank">
     <img src="https://github.com/tpemeja/fastmock/workflows/Test/badge.svg" alt="Test">
 </a>
-<a href="https://coveralls.io/repos/github/tpemeja/fastmock/badge.svg?branch=main" target="_blank">
+<a href="https://coveralls.io/github/tpemeja/fastmock?branch=main" target="_blank">
     <img src="https://coveralls.io/repos/github/tpemeja/fastmock/badge.svg?branch=main" alt="Coverage">
+</a>
+<a href="https://pypi.org/project/fastmock" target="_blank">
+    <img src="https://img.shields.io/pypi/v/fastmock?color=%2334D058&label=pypi%20package" alt="Package version">
 </a>
 </p>
 
