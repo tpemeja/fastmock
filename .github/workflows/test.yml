@@ -1,0 +1,30 @@
+name: Test
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: pip install -r requirements-tests.txt
+
+      - name: Install and run pylint
+        run: pylint --fail-under=${{ vars.PYLINT_THRESHOLD }} fastmock/
+
+      - name: Run tests
+        run: |
+          coverage run --source=. -m pytest -v tests
+          coverage xml

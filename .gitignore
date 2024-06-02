@@ -1,0 +1,7 @@
+/dist/
+/.coverage
+/build/
+/FatsMock.egg-info/
+/.pytest_cache/
+/site/
+/.idea/

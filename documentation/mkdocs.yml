@@ -1,0 +1,55 @@
+site_name: FastMock
+site_description: FastAPI mock middleware
+site_url: https://tpemeja.github.io/fastmock/
+theme:
+  name: material
+  palette:
+  - media: '(prefers-color-scheme: light)'
+    scheme: default
+    primary: teal
+    accent: amber
+    toggle:
+      icon: material/lightbulb
+      name: Switch to dark mode
+  - media: '(prefers-color-scheme: dark)'
+    scheme: slate
+    primary: teal
+    accent: amber
+    toggle:
+      icon: material/lightbulb-outline
+      name: Switch to light mode
+  features:
+  - search.suggest
+  - search.highlight
+  - content.tabs.link
+  - content.tooltips
+  - content.code.annotate
+  - content.code.copy
+  - content.code.select
+  icon:
+    repo: fontawesome/brands/github
+  logo: img/favicon.png
+  favicon: img/favicon.png
+  language: en
+repo_name: tpemeja/fastmock
+repo_url: https://github.com/tpemeja/fastmock
+
+nav:
+- Overview: 'index.md'
+- Mock Data: 'mock-data.md'
+- Middleware: 'middleware.md'
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+extra:
+  social:
+    - icon: fontawesome/brands/github-alt
+      link: https://github.com/tpemeja/fastmock
+    - icon: fontawesome/brands/linkedin
+      link: https://www.linkedin.com/in/tanguy-pemeja/

@@ -1,0 +1,8 @@
+pydantic
+pytest
+pytest-asyncio
+fastapi
+polyfactory
+pylint
+coverage
+coveralls
