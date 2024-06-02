@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://tpemeja.github.io/fastmock"><img src="https://github.com/tpemeja/fastmock/blob/main/documentation/docs/img/title.png" alt="fastmock" style="width: 300px; height: 300px;"></a>
+  <a href="https://tpemeja.github.io/fastmock"><img src="https://github.com/tpemeja/fastmock/blob/main/documentation/docs/img/title.png?raw=true" alt="fastmock" style="width: 300px; height: 300px;"></a>
 </p>
 <p align="center">
     FastMock framework, mock your FastAPI APIs
