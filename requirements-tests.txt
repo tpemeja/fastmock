@@ -6,3 +6,4 @@ polyfactory
 pylint
 coverage
 coveralls
+pytest-cov
