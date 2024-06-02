@@ -8,6 +8,9 @@
 <a href="https://github.com/tpemeja/fastmock/workflows/Test/badge.svg" target="_blank">
     <img src="https://github.com/tpemeja/fastmock/workflows/Test/badge.svg" alt="Test">
 </a>
+<a href="https://coveralls.io/repos/github/tpemeja/fastmock/badge.svg?branch=main" target="_blank">
+    <img src="https://coveralls.io/repos/github/tpemeja/fastmock/badge.svg?branch=main" alt="Coverage">
+</a>
 </p>
 
 ---
