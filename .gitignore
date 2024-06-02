@@ -5,3 +5,4 @@
 /.pytest_cache/
 /site/
 /.idea/
+/coverage.xml
