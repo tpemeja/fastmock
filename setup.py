@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="fastmock",
-    version="0.1.0",
+    version="0.1.1",
     author="Tanguy PEMEJA",
     author_email="tanguy.pemeja@gmail.com",
     description="FastAPI middleware for mocking responses based on Pydantic models response",
