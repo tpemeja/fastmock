@@ -39,6 +39,8 @@ The MockData model is used to define the configuration for mock data generation.
 * **fail_rate (float)**: Probability, between `0` and `1`, that a request returns `fail_status_code` instead of the normal mock response. Defaults to `0`.
 * **fail_status_code (int | None)**: HTTP status code to return when a request fails per `fail_rate`. Required if `fail_rate` is greater than `0`.
 * **validate_request (bool)**: Whether to validate the request's path, query, header, cookie, and body parameters against the endpoint's declared types before mocking a response. Defaults to `True`.
+* **seed (int | None)**: Base seed making responses reproducible. Set to `None` for freshly generated data on every request. Defaults to `1`.
+* **factory (Any)**: A polyfactory factory used to build the response instead of deriving one from the response model. Defaults to `None`.
 
 ```python
 class MockData(BaseModel):
@@ -59,6 +61,11 @@ class MockData(BaseModel):
             and body parameters against the endpoint's declared types before mocking a response,
             returning a 422 on mismatch just like a real FastAPI implementation would. Defaults
             to True.
+        seed (int | None): Base seed making responses reproducible. With a seed set, a response
+            is a pure function of the request. Set to None for a freshly generated response every
+            time. Defaults to 1.
+        factory (Any): A polyfactory factory used to build the response instead of deriving one
+            from the response model. Takes precedence over `type`. Defaults to None.
     """
     activate: bool = True
     element_size: int = 2
@@ -68,6 +75,8 @@ class MockData(BaseModel):
     fail_rate: float = Field(default=0, ge=0, le=1)
     fail_status_code: int | None = None
     validate_request: bool = True
+    seed: int | None = 1
+    factory: Any = None
 ```
 
 ### Usage Example
@@ -128,4 +137,68 @@ Calling `POST /items` with a body that doesn't match `Item`, or without the requ
 Only the parameters declared directly on the endpoint are validated. Any `Depends(...)` dependencies are never resolved or called, so mocking a route never triggers real authentication, database access, or other side-effecting dependencies.
 
 Set `validate_request=False` to disable this and go back to accepting any request, useful for quick prototyping when you don't want to match the schema exactly yet.
+
+## Reproducible Responses
+
+By default, a mocked response is a **pure function of the request**. The same method, path, query string and body always produce the same data — across page refreshes, server restarts and machines.
+
+```console
+$ curl http://127.0.0.1:8000/items/1
+{"name": "Kimberly Ortiz", "price": 42.51, "is_offer": null}
+
+$ curl http://127.0.0.1:8000/items/1   # same request, same data
+{"name": "Kimberly Ortiz", "price": 42.51, "is_offer": null}
+
+$ curl http://127.0.0.1:8000/items/2   # different resource, different data
+{"name": "Alan Weber", "price": 8.02, "is_offer": true}
+```
+
+This is what makes generated data usable beyond a placeholder: a demo doesn't reshuffle every time someone refreshes, an integration test can assert on a literal payload, and a colleague reproducing a bug sees the values you saw.
+
+The `seed` acts as a base mixed into every request. Change it to shift the entire data set at once:
+
+```python
+@mock(seed=42)
+```
+
+Because `seed` is a plain integer, it can also be overridden per request through the `X-FASTMOCK-SEED` header, which is handy for flipping between data sets without restarting.
+
+Set `seed=None` to generate fresh data on every request instead.
+
+!!! note "Fault injection stays random"
+    `fail_rate` is deliberately unaffected by seeding, so a flaky endpoint stays genuinely flaky while its payloads remain stable. If you want an endpoint to fail *predictably*, use `fail_rate=1` or `response_status_code`.
+
+Form and multipart bodies are excluded from the seed, since upload boundaries would make it unstable, and only the first 64KB of any body contributes.
+
+## Custom Factories
+
+fastmock generates data that is plausible **field by field**. It does not infer relationships *between* fields — that a `total` should equal the sum of its line items, or that a `tracking_number` should be present exactly when `status` is `"shipped"`. Those invariants live in your domain, not in the schema.
+
+When they matter, hand fastmock a [polyfactory](https://polyfactory.litestar.dev/) factory and it will use that instead of deriving one from the response model:
+
+```python
+from polyfactory.factories.pydantic_factory import ModelFactory
+
+class OrderFactory(ModelFactory[Order]):
+    @classmethod
+    def build(cls, **kwargs) -> Order:
+        line_items = [LineItem(price=10.0), LineItem(price=5.5)]
+        return Order(
+            line_items=line_items,
+            total=sum(item.price for item in line_items),
+            status="shipped",
+            tracking_number="TRACK-123",
+        )
+
+@mock(factory=OrderFactory)
+@app.get("/orders",
+         status_code=status.HTTP_200_OK,
+         responses={
+             status.HTTP_200_OK: {"model": list[Order]}
+         })
+def list_orders():
+    return []
+```
+
+The factory is applied per element for list responses, and takes precedence over `type`. Being a callable, it is the one parameter that cannot be set through a request header.
 

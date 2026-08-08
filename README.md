@@ -33,6 +33,8 @@ Key features of this project include:
 - **Modularity**: The package includes default functions to retrieve mocking parameters from API declarations to request headers. However, all these functions can be modified, allowing you to create your own custom functions.
 - **Fault Injection**: Simulate latency and failures per-route or via request header, so you can test how your client handles a slow or unreliable API without writing any extra code.
 - **Request Validation**: Path, query, header, cookie, and body parameters are validated against the endpoint's declared types by default, returning the same `422` a real FastAPI implementation would — without ever calling your real `Depends(...)` dependencies.
+- **Reproducible Responses**: A response is a pure function of the request, so the same call returns the same data across refreshes, restarts and machines. Demos stop reshuffling and integration tests can assert on a literal payload.
+- **Plausible Data**: A field named `country` holds a country, not a random string. Where a schema can't express an invariant, hand fastmock your own factory.
 
 ## Requirements
 
@@ -129,27 +131,30 @@ You will see the JSON response as:
 ```JSON
 [
   {
-    "name": "fuquvERvYTfWVEbYRKgi",
-    "price": 18164954265977.8,
+    "name": "fdYLIZjVsRwVvCGsiRtM",
+    "price": 2745.57252578917,
     "is_offer": null
   },
   {
-    "name": "akMCejCxOhMjgGMPMrcb",
-    "price": 40.3130726635657,
+    "name": "CNNXlfhuumgLhcbhixfa",
+    "price": 96.966419251723,
     "is_offer": null
   },
   {
-    "name": "uEONHBXGCirPDrLJKgXu",
-    "price": -9.23356705084994,
+    "name": "vrSOxrckaSxyKiYTFbSr",
+    "price": 64569428.1966292,
     "is_offer": null
   }
 ]
 ```
 
+Refresh the page and you will see exactly the same response: mock data is reproducible by default.
+
 You just created an API using FastAPI that:
 
 * Return value generated from defined response model
 * Modify output list size using decorator
+* Return the same data for the same request, every time
 
 
 ## How does this compare to other FastAPI mocking libraries?
@@ -165,6 +170,8 @@ A couple of other projects cover similar ground. Here's how fastmock differs:
 | Multiple examples, randomly chosen              | – | ✅ | – |
 | Fault injection (delay / failure rate)          | ✅ | – | – |
 | Request validation (real FastAPI-shaped 422s)   | ✅ | – | – |
+| Reproducible responses (same request, same data) | ✅ | – | – |
+| Field-name-aware data generation                | ✅ | – | – |
 | Pydantic 2                                      | ✅ | ✅ | – |
 | Actively maintained                             | ✅ | ✅ | ❌ (last commit 2024) |
 

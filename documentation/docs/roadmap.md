@@ -54,16 +54,16 @@ def list_orders(): ...
 fastmock does not keep a store. A `POST` followed by a `GET` will not return what you posted.
 Responses **vary with** the request, but never **echo** it.
 
-## Planned for 0.2.0
+## Shipped in 0.2.0
 
-The theme is: fastmock's output becomes stable and plausible.
+The theme was: fastmock's output becomes stable and plausible.
 
 ### Deterministic responses
 
-Today, two identical requests return different data — which makes demos jump around on refresh
-and makes integration tests impossible to write against a literal payload.
+Before 0.2.0, two identical requests returned different data — which made demos jump around on
+refresh and made integration tests impossible to write against a literal payload.
 
-In 0.2.0, the contract becomes:
+The contract is now:
 
 > **A response is a pure function of the request.**
 
@@ -76,9 +76,9 @@ seed: int | None = 1   # set to None for non-deterministic output
 ```
 
 !!! warning "Behaviour change"
-    Determinism is **on by default** in 0.2.0. If you rely on responses varying between identical
-    requests (load testing with varied payloads, for example), set `seed=None` to restore the
-    current behaviour.
+    Determinism is **on by default** as of 0.2.0. If you rely on responses varying between
+    identical requests (load testing with varied payloads, for example), set `seed=None` to
+    restore the previous behaviour.
 
 Fault injection stays genuinely random: `fail_rate` is unaffected by seeding, so a flaky endpoint
 stays flaky. If you want an endpoint to fail *deterministically*, that is already expressible with
@@ -86,15 +86,16 @@ stays flaky. If you want an endpoint to fail *deterministically*, that is alread
 
 ### Plausible values from field names
 
-Today a field named `country` gets a random string. In 0.2.0 it gets a country.
+A field named `country` used to get a random string. It now gets a country.
 
-fastmock will ship a conservative, exact-match map from common field names to Faker providers —
+fastmock ships a conservative, exact-match map from common field names to Faker providers —
 `email`, `first_name`, `last_name`, `phone`, `city`, `country`, `url` and similar. The map is
 deliberately small: a plausible-looking *wrong* value (a country name where your client expects
 an ISO code) is worse than obvious gibberish, because gibberish tells you to reach for the escape
 hatch and a wrong value doesn't.
 
-The map is extensible, in keeping with how the rest of fastmock works:
+The map is extensible, in keeping with how the rest of fastmock works — see
+[Field Name Providers](middleware.md#field-name-providers):
 
 ```python
 app.add_middleware(
@@ -109,8 +110,8 @@ If a generated value looks wildly implausible, adding a constraint to the model 
 
 ### Custom factories
 
-The `factory=` escape hatch described under [cross-field coherence](#cross-field-coherence) becomes
-a supported, documented parameter.
+The `factory=` escape hatch described under [cross-field coherence](#cross-field-coherence) is now
+a supported parameter — see [Custom Factories](mock-data.md#custom-factories).
 
 ## Where configuration lives
 

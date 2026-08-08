@@ -47,6 +47,33 @@ For example, to set the element size of the API output to 3, you can send the he
 curl -H "X-FASTMOCK-ELEMENT-SIZE: 3" http://127.0.0.1:8000/items
 ```
 
+Note that `factory` is the one parameter without a header equivalent, since a header can only carry text.
+
+## Field Name Providers
+
+Polyfactory picks values from a field's *type*, never its name, so a field called `country` would otherwise hold a random string. fastmock ships a small map from common field names to Faker providers — `first_name`, `city`, `country`, `email`, `url` and similar — so that generated data reads like real data.
+
+The map is deliberately conservative and matched exactly, never by substring. A plausible-looking but wrong value is worse than obvious gibberish: gibberish tells you to reach for a custom factory, whereas a country name where your client expects an ISO code quietly misleads. For the same reason a bare `name` is absent, being as likely to describe a product or a company as a person.
+
+A provider is only applied when the value it produces exactly matches the field's declared type, so a `city` field annotated as an `int` still generates an int. Semantically typed fields such as `EmailStr` are left to polyfactory, which already handles them.
+
+Extend or override the map with `provider_map`:
+
+```python
+app.add_middleware(
+    FastMockMiddleware,
+    provider_map={"sku": lambda faker: faker.bothify("???-####")},
+)
+```
+
+Entries are merged over the defaults, so the example above adds `sku` while leaving everything else in place. Pass an empty mapping to switch name-based inference off entirely:
+
+```python
+app.add_middleware(FastMockMiddleware, provider_map={})
+```
+
+`provider_map` is global policy rather than per-request state, which is why it lives on the middleware rather than on `MockData`. If a single route needs different values, use a [custom factory](mock-data.md#custom-factories) instead.
+
 ## Data Retrieval Order
 During middleware initialization, you can provide custom functions to override the default data retrieval functions or their order with the attribute `retrieve_data_function_list`.
 The default order of operations is as follows, with each step potentially overriding the data from the previous step if parameters are defined:
