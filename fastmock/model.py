@@ -30,6 +30,10 @@ class MockData(BaseModel):
             mock response. Defaults to 0.
         fail_status_code (int | None): HTTP status code to return when a request fails per
             `fail_rate`. Required if `fail_rate` is greater than 0.
+        validate_request (bool): Whether to validate the request's path, query, header, cookie,
+            and body parameters against the endpoint's declared types before mocking a response,
+            returning a 422 on mismatch just like a real FastAPI implementation would. Defaults
+            to True.
     """
     activate: bool = True
     element_size: int = 2
@@ -38,3 +42,4 @@ class MockData(BaseModel):
     delay: float = 0
     fail_rate: float = Field(default=0, ge=0, le=1)
     fail_status_code: int | None = None
+    validate_request: bool = True

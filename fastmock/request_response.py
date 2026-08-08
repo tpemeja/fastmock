@@ -1,10 +1,12 @@
 import asyncio
+import json
 import random
 import re
 from types import GenericAlias
 from typing import Any, Mapping, Optional, Sequence, get_args, get_origin, Type
 
-from fastapi import Request
+from fastapi import Request, params
+from fastapi.dependencies.utils import request_body_to_args, request_params_to_args
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from fastapi.routing import APIRoute
@@ -122,6 +124,59 @@ def get_mock_factory_class(response_model: Any) -> Optional[Type[BaseFactory]]:
     return None
 
 
+async def get_request_validation_errors(request: Request, api_route: APIRoute) -> list:
+    """
+    Validates the request's path, query, header, cookie, and body parameters against the
+    route's declared types, the same way FastAPI itself would when actually handling the
+    request. Dependencies declared with `Depends(...)` are intentionally never resolved or
+    called, so mocking a route never triggers real auth, database, or other side-effecting
+    dependencies.
+
+    Args:
+        request (Request): The incoming HTTP request.
+        api_route (APIRoute): The matched route.
+
+    Returns:
+        list: A list of FastAPI-style validation error dicts, empty if the request is valid.
+    """
+    dependant = api_route.dependant
+    errors = []
+
+    for fields, received in (
+        (dependant.path_params, request.path_params),
+        (dependant.query_params, request.query_params),
+        (dependant.header_params, request.headers),
+        (dependant.cookie_params, request.cookies),
+    ):
+        _, param_errors = request_params_to_args(fields, received)
+        errors += param_errors
+
+    is_body_form = api_route.body_field and isinstance(api_route.body_field.field_info, params.Form)
+    if dependant.body_params and not is_body_form:
+        body = None
+        try:
+            body_bytes = await request.body()
+            if body_bytes:
+                body = await request.json()
+        except json.JSONDecodeError as error:
+            errors.append({
+                "type": "json_invalid",
+                "loc": ("body", error.pos),
+                "msg": "JSON decode error",
+                "input": {},
+                "ctx": {"error": error.msg},
+            })
+        else:
+            _, body_errors = await request_body_to_args(
+                body_fields=dependant.body_params,
+                received_body=body,
+                embed_body_fields=getattr(api_route, "_embed_body_fields", False),
+            )
+            errors += body_errors
+
+    return errors
+
+
 async def get_response(request: Request, mock_data: MockData):
     """
     Generates a JSON response based on the matched route and mock data.
@@ -137,6 +192,12 @@ async def get_response(request: Request, mock_data: MockData):
         await asyncio.sleep(mock_data.delay)
 
     api_route = get_matched_route(request)
+
+    if mock_data.validate_request:
+        validation_errors = await get_request_validation_errors(request, api_route)
+        if validation_errors:
+            return JSONResponse(status_code=422,
+                                content={"detail": jsonable_encoder(validation_errors)})
 
     if mock_data.fail_rate and random.random() < mock_data.fail_rate:
         if mock_data.fail_status_code is None:

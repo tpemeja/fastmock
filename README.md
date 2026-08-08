@@ -32,6 +32,7 @@ Key features of this project include:
 - **Flexibility**: Mocking can be customized through various parameters, such as activation, data generation, length, status codes, and more.
 - **Modularity**: The package includes default functions to retrieve mocking parameters from API declarations to request headers. However, all these functions can be modified, allowing you to create your own custom functions.
 - **Fault Injection**: Simulate latency and failures per-route or via request header, so you can test how your client handles a slow or unreliable API without writing any extra code.
+- **Request Validation**: Path, query, header, cookie, and body parameters are validated against the endpoint's declared types by default, returning the same `422` a real FastAPI implementation would — without ever calling your real `Depends(...)` dependencies.
 
 ## Requirements
 
@@ -163,6 +164,7 @@ A couple of other projects cover similar ground. Here's how fastmock differs:
 | Configurable data retrieval precedence chain    | ✅ | – | – |
 | Multiple examples, randomly chosen              | – | ✅ | – |
 | Fault injection (delay / failure rate)          | ✅ | – | – |
+| Request validation (real FastAPI-shaped 422s)   | ✅ | – | – |
 | Pydantic 2                                      | ✅ | ✅ | – |
 | Actively maintained                             | ✅ | ✅ | ❌ (last commit 2024) |
 

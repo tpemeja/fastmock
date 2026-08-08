@@ -38,6 +38,7 @@ The MockData model is used to define the configuration for mock data generation.
 * **delay (float)**: Number of seconds to wait before returning the mock response. Defaults to `0`.
 * **fail_rate (float)**: Probability, between `0` and `1`, that a request returns `fail_status_code` instead of the normal mock response. Defaults to `0`.
 * **fail_status_code (int | None)**: HTTP status code to return when a request fails per `fail_rate`. Required if `fail_rate` is greater than `0`.
+* **validate_request (bool)**: Whether to validate the request's path, query, header, cookie, and body parameters against the endpoint's declared types before mocking a response. Defaults to `True`.
 
 ```python
 class MockData(BaseModel):
@@ -54,6 +55,10 @@ class MockData(BaseModel):
             mock response. Defaults to 0.
         fail_status_code (int | None): HTTP status code to return when a request fails per
             `fail_rate`. Required if `fail_rate` is greater than 0.
+        validate_request (bool): Whether to validate the request's path, query, header, cookie,
+            and body parameters against the endpoint's declared types before mocking a response,
+            returning a 422 on mismatch just like a real FastAPI implementation would. Defaults
+            to True.
     """
     activate: bool = True
     element_size: int = 2
@@ -62,6 +67,7 @@ class MockData(BaseModel):
     delay: float = 0
     fail_rate: float = Field(default=0, ge=0, le=1)
     fail_status_code: int | None = None
+    validate_request: bool = True
 ```
 
 ### Usage Example
@@ -102,4 +108,24 @@ def read_items():
 In this example, every call to `/items` waits half a second, and roughly 20% of requests return a `503` instead of the item list.
 
 Setting `fail_rate` to `1` always fails (useful for deterministically testing an error path), and the default `fail_rate` of `0` never does.
+
+## Request Validation
+
+By default, fastmock validates an incoming request's path, query, header, cookie, and body parameters against the endpoint's declared types before generating a mock response, exactly like a real FastAPI implementation would. A mismatch returns a standard FastAPI `422` validation error, without needing you to declare `422` in the route's `responses`.
+
+```python
+@app.post("/items",
+          status_code=status.HTTP_200_OK,
+          responses={
+              status.HTTP_200_OK: {"model": Item}
+          })
+def create_item(item: Item, quantity: int) -> Item:
+    return item
+```
+
+Calling `POST /items` with a body that doesn't match `Item`, or without the required `quantity` query parameter, returns a `422` with the same error shape a real FastAPI app would produce — without you writing `create_item`'s body at all.
+
+Only the parameters declared directly on the endpoint are validated. Any `Depends(...)` dependencies are never resolved or called, so mocking a route never triggers real authentication, database access, or other side-effecting dependencies.
+
+Set `validate_request=False` to disable this and go back to accepting any request, useful for quick prototyping when you don't want to match the schema exactly yet.
 
