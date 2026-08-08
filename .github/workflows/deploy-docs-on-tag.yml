@@ -14,18 +14,17 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v2
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
         with:
-          python-version: '3.x'
+          enable-cache: true
 
       - name: Install dependencies
-        run: |
-          pip install -r requirements-docs.txt
+        run: uv sync --group docs
 
       - name: Deploy to GitHub Pages
-        run: mkdocs gh-deploy --force --config-file documentation/mkdocs.yml
+        run: uv run mkdocs gh-deploy --force --config-file documentation/mkdocs.yml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

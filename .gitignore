@@ -1,8 +1,27 @@
-/dist/
-/.coverage
-/build/
-/FatsMock.egg-info/
+# Byte-compiled / cache
+__pycache__/
+*.py[cod]
+
+# Environments
+.venv/
+venv/
+
+# macOS
+.DS_Store
+
+# Testing / coverage
 /.pytest_cache/
-/site/
-/.idea/
+/.coverage
 /coverage.xml
+htmlcov/
+
+# Build / packaging
+/dist/
+/build/
+*.egg-info/
+
+# Docs build
+/site/
+
+# IDE
+/.idea/
