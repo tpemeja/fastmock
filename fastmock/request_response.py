@@ -113,6 +113,10 @@ def get_model_factory(
     Returns:
         Any: The generated model instance.
     """
+    # A supplied factory is the most specific instruction available, so it wins over `type`.
+    if mock_data.factory is not None:
+        return mock_data.factory.build()
+
     if mock_data.type == mock_data.type.example:
         model_example = (getattr(model, "model_config", {})
                          .get("json_schema_extra", {}).get("example", None))
@@ -136,7 +140,7 @@ def get_model_factory(
     if provider:
         return provider()
 
-    raise ValueError(f'Cannot mock {model.response_model.__name__}')
+    raise ValueError(f'Cannot mock {getattr(model, "__name__", model)!s}')
 
 
 async def get_request_validation_errors(request: Request, api_route: APIRoute) -> list:

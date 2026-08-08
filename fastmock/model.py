@@ -1,4 +1,6 @@
 from enum import Enum
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 
@@ -39,6 +41,11 @@ class MockData(BaseModel):
             produce the same data, across restarts and machines. Change it to shift the whole
             data set. Set to None for a freshly generated response every time. Defaults to 1.
             Fault injection is unaffected and stays genuinely random.
+        factory (Any): A polyfactory factory used to build the response instead of deriving one
+            from the response model. This is the escape hatch for invariants fastmock cannot
+            infer from a schema, such as a total matching the sum of its line items. Takes
+            precedence over `type`. Being a callable it cannot be set through a request header.
+            Defaults to None.
     """
     activate: bool = True
     element_size: int = 2
@@ -49,3 +56,4 @@ class MockData(BaseModel):
     fail_status_code: int | None = None
     validate_request: bool = True
     seed: int | None = 1
+    factory: Any = None
