@@ -88,11 +88,18 @@ def resolve_annotation(annotation: Any) -> Optional[type]:
     while get_origin(annotation) is Annotated:
         annotation = get_args(annotation)[0]
 
-    if get_origin(annotation) in (Union, UnionType):
+    origin = get_origin(annotation)
+
+    if origin in (Union, UnionType):
         concrete = [arg for arg in get_args(annotation) if arg is not type(None)]
         if len(concrete) != 1:
             return None
         return resolve_annotation(concrete[0])
+
+    # Anything still carrying an origin is a parameterised generic such as list[str]. Checked
+    # explicitly because isinstance(list[str], type) is True on Python 3.10 but False from 3.11.
+    if origin is not None:
+        return None
 
     return annotation if isinstance(annotation, type) else None
 
