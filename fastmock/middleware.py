@@ -1,8 +1,9 @@
-from typing import Callable
+from typing import Any, Callable, Mapping
 
 from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from fastmock.factories import build_base_factories
 from fastmock.request_response import get_matched_route, get_response
 from fastmock.model import MockData
 
@@ -22,13 +23,15 @@ class FastMockMiddleware(BaseHTTPMiddleware):
             to retrieve additional data from the request, ordered from least to most
             important.
         mock_data (MockData): The base mock data configuration.
+        base_factories (tuple): Name-aware base factories used to generate mock values.
     """
 
     def __init__(
             self,
             app,
             mock_data: MockData = MockData(),
-            retrieve_data_function_list: list[Callable[[Request], dict]] = None
+            retrieve_data_function_list: list[Callable[[Request], dict]] = None,
+            provider_map: Mapping[str, Callable[[Any], Any]] = None
     ):
         """
         Initializes the FastMockMiddleware.
@@ -39,6 +42,10 @@ class FastMockMiddleware(BaseHTTPMiddleware):
             retrieve_data_function_list (list[Callable[[Request], dict]]): List of functions
                 to retrieve additional data from the request, ordered from least to most
                 important function. Defaults to [get_data_from_decorator_route, get_data_from_header].
+            provider_map (Mapping[str, Callable[[Any], Any]]): Field name to Faker provider,
+                merged over fastmock.factories.DEFAULT_PROVIDER_MAP. Pass an empty mapping to
+                disable name-based inference. This is global policy rather than per-request
+                state, which is why it lives here instead of on MockData.
         """
         super().__init__(app)
 
@@ -47,6 +54,7 @@ class FastMockMiddleware(BaseHTTPMiddleware):
 
         self.retrieve_data_function_list = retrieve_data_function_list
         self.mock_data = mock_data
+        self.base_factories = build_base_factories(provider_map)
 
     def get_mock_data(self, request: Request) -> MockData:
         """
@@ -83,6 +91,6 @@ class FastMockMiddleware(BaseHTTPMiddleware):
             return response
 
         # Get the mock response based on the request and mock data
-        route_response = await get_response(request, mock_data)
+        route_response = await get_response(request, mock_data, self.base_factories)
 
         return route_response
