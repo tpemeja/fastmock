@@ -38,9 +38,12 @@ nav:
 - Overview: 'index.md'
 - Mock Data: 'mock-data.md'
 - Middleware: 'middleware.md'
+- Roadmap: 'roadmap.md'
 - Contributing: 'contributing.md'
 
 markdown_extensions:
+  - admonition
+  - pymdownx.details
   - pymdownx.highlight:
       anchor_linenums: true
       line_spans: __span
