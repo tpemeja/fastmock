@@ -83,6 +83,6 @@ class FastMockMiddleware(BaseHTTPMiddleware):
             return response
 
         # Get the mock response based on the request and mock data
-        route_response = get_response(request, mock_data)
+        route_response = await get_response(request, mock_data)
 
         return route_response

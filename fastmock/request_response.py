@@ -1,3 +1,5 @@
+import asyncio
+import random
 import re
 from types import GenericAlias
 from typing import Any, Mapping, Optional, Sequence, get_args, get_origin, Type
@@ -120,7 +122,7 @@ def get_mock_factory_class(response_model: Any) -> Optional[Type[BaseFactory]]:
     return None
 
 
-def get_response(request: Request, mock_data: MockData):
+async def get_response(request: Request, mock_data: MockData):
     """
     Generates a JSON response based on the matched route and mock data.
 
@@ -131,9 +133,16 @@ def get_response(request: Request, mock_data: MockData):
     Returns:
         JSONResponse: The generated JSON response.
     """
+    if mock_data.delay:
+        await asyncio.sleep(mock_data.delay)
+
     api_route = get_matched_route(request)
 
-    if mock_data.response_status_code is None:
+    if mock_data.fail_rate and random.random() < mock_data.fail_rate:
+        if mock_data.fail_status_code is None:
+            raise Exception("Mock fail_rate is set but no fail_status_code was defined")
+        status_code = mock_data.fail_status_code
+    elif mock_data.response_status_code is None:
         status_code = api_route.status_code
     else:
         status_code = mock_data.response_status_code

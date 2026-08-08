@@ -35,6 +35,9 @@ The MockData model is used to define the configuration for mock data generation.
 * **element_size (int)**: Number of elements to be included in the mock response. Defaults to `2`.
 * **type (GenerationTypeEnum)**: The type of data generation. Defaults to `GenerationTypeEnum.default`.
 * **response_status_code (int | None)**: HTTP status code for the mock response. If None, a default status code is used.
+* **delay (float)**: Number of seconds to wait before returning the mock response. Defaults to `0`.
+* **fail_rate (float)**: Probability, between `0` and `1`, that a request returns `fail_status_code` instead of the normal mock response. Defaults to `0`.
+* **fail_status_code (int | None)**: HTTP status code to return when a request fails per `fail_rate`. Required if `fail_rate` is greater than `0`.
 
 ```python
 class MockData(BaseModel):
@@ -46,11 +49,19 @@ class MockData(BaseModel):
         element_size (int): Number of elements to be included in the mock response. Defaults to 2.
         type (GenerationTypeEnum): The type of data generation. Defaults to GenerationTypeEnum.default.
         response_status_code (int | None): HTTP status code for the mock response. If None, a default status code is used.
+        delay (float): Number of seconds to wait before returning the mock response. Defaults to 0.
+        fail_rate (float): Probability (0-1) of returning `fail_status_code` instead of the normal
+            mock response. Defaults to 0.
+        fail_status_code (int | None): HTTP status code to return when a request fails per
+            `fail_rate`. Required if `fail_rate` is greater than 0.
     """
     activate: bool = True
     element_size: int = 2
     type: GenerationTypeEnum = GenerationTypeEnum.default
     response_status_code: int | None = None
+    delay: float = 0
+    fail_rate: float = Field(default=0, ge=0, le=1)
+    fail_status_code: int | None = None
 ```
 
 ### Usage Example
@@ -68,4 +79,27 @@ print(mock_data_config)
 
 In this example, the mock data generation is activated, five elements will be included in the mock response,
 the data type is set to generated, and the HTTP response status code is set to 200.
+
+## Fault Injection
+
+`delay` and `fail_rate` let you simulate an unreliable or slow upstream API without writing any extra code, which is useful for testing how your frontend or downstream services handle latency and failures.
+
+* **delay** adds a fixed, deterministic wait (in seconds) before every mocked response.
+* **fail_rate** is the probability that a request is answered with `fail_status_code` instead of its normal mock response. `fail_status_code` must be one of the route's declared `responses`, the same rule that applies to `response_status_code`.
+
+```python
+@mock(delay=0.5, fail_rate=0.2, fail_status_code=503)
+@app.get("/items",
+         status_code=status.HTTP_200_OK,
+         responses={
+             status.HTTP_200_OK: {"model": list[Item]},
+             status.HTTP_503_SERVICE_UNAVAILABLE: {"model": str}
+         })
+def read_items():
+    return []
+```
+
+In this example, every call to `/items` waits half a second, and roughly 20% of requests return a `503` instead of the item list.
+
+Setting `fail_rate` to `1` always fails (useful for deterministically testing an error path), and the default `fail_rate` of `0` never does.
 
