@@ -38,6 +38,7 @@ nav:
 - Overview: 'index.md'
 - Mock Data: 'mock-data.md'
 - Middleware: 'middleware.md'
+- Contributing: 'contributing.md'
 
 markdown_extensions:
   - pymdownx.highlight:

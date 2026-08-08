@@ -144,6 +144,10 @@ You just created an API using FastAPI that:
 * Ideas and code for data generation with Faker inspired by **NiyazNz** in the [fastapi-mock-middleware project](https://github.com/NiyazNz/fastapi-mock-middleware).
 
 
+## Contributing
+
+This project uses [uv](https://docs.astral.sh/uv/) for dependency management. To set up a development environment, run the tests, or cut a release, see the [Contributing guide](https://tpemeja.github.io/fastmock/contributing/).
+
 ## License
 
 This project is licensed under the terms of the MIT license.
