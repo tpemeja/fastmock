@@ -14,6 +14,7 @@ from starlette.routing import Match
 
 from fastmock.factories import get_mock_factory_class
 from fastmock.model import MockData
+from fastmock.seeding import get_request_seed, seed_factories
 
 
 def get_matched_route(request: Request) -> APIRoute | None:
@@ -230,6 +231,12 @@ async def get_response(
     if status_code not in api_route.responses:
         raise Exception("Mock status code not defined in API declaration")
     api_response = api_route.responses[status_code]
+
+    # Seed once per response, immediately before generating it. Seeding per element would make
+    # every element of a list identical, and any await between here and generation would let a
+    # concurrent request reseed the shared factory state from under us.
+    if mock_data.seed is not None:
+        seed_factories(await get_request_seed(request, mock_data.seed))
 
     response_model = get_model_response(api_response.get("model"), mock_data, base_factories)
 

@@ -34,6 +34,11 @@ class MockData(BaseModel):
             and body parameters against the endpoint's declared types before mocking a response,
             returning a 422 on mismatch just like a real FastAPI implementation would. Defaults
             to True.
+        seed (int | None): Base seed making responses reproducible. With a seed set, a response
+            is a pure function of the request: the same method, path, query and body always
+            produce the same data, across restarts and machines. Change it to shift the whole
+            data set. Set to None for a freshly generated response every time. Defaults to 1.
+            Fault injection is unaffected and stays genuinely random.
     """
     activate: bool = True
     element_size: int = 2
@@ -43,3 +48,4 @@ class MockData(BaseModel):
     fail_rate: float = Field(default=0, ge=0, le=1)
     fail_status_code: int | None = None
     validate_request: bool = True
+    seed: int | None = 1
