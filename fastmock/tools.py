@@ -16,7 +16,7 @@ def get_data_from_decorator_route(request: Request) -> dict:
     """
     route = get_matched_route(request)
     if route is not None and hasattr(route.endpoint, FastMockDecorator.attribute_name):
-        return getattr(route.endpoint, FastMockDecorator.attribute_name).dict()
+        return getattr(route.endpoint, FastMockDecorator.attribute_name).model_dump()
 
     return {}
 

@@ -58,7 +58,7 @@ class FastMockMiddleware(BaseHTTPMiddleware):
         Returns:
             MockData: The merged mock data.
         """
-        merged_data = self.mock_data.dict()
+        merged_data = self.mock_data.model_dump()
         for retrieve_data_function in self.retrieve_data_function_list:
             merged_data.update(retrieve_data_function(request))
 

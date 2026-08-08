@@ -56,9 +56,9 @@ class FastMockDecorator:
             If `func` is provided, returns the decorated function with the updated mock data.
         """
         if func is None:
-            updated_data = self.default_data.copy(update=kwargs)
-            return self.__class__(**updated_data.dict())
+            updated_data = self.default_data.model_copy(update=kwargs)
+            return self.__class__(**updated_data.model_dump())
 
-        updated_data = self.default_data.copy(update=kwargs)
+        updated_data = self.default_data.model_copy(update=kwargs)
         setattr(func, self.attribute_name, updated_data)
         return func
