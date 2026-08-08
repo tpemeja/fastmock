@@ -3,7 +3,7 @@ import json
 import random
 import re
 from types import GenericAlias
-from typing import Any, Mapping, Optional, Sequence, get_args, get_origin, Type
+from typing import Mapping, Optional, Sequence, get_args, get_origin, Type
 
 from fastapi import Request, params
 from fastapi.dependencies.utils import request_body_to_args, request_params_to_args
@@ -12,6 +12,7 @@ from fastapi.responses import JSONResponse
 from fastapi.routing import APIRoute
 from polyfactory import BaseFactory
 
+from fastmock.factories import get_mock_factory_class
 from fastmock.model import MockData
 
 
@@ -38,19 +39,24 @@ def get_matched_route(request: Request) -> APIRoute | None:
     return None
 
 
-def get_model_response(model, mock_data: MockData):
+def get_model_response(
+        model,
+        mock_data: MockData,
+        base_factories: Optional[Sequence[Type[BaseFactory]]] = None
+):
     """
     Generates a response based on the provided model and mock data.
 
     Args:
         model: The model class to generate the response for.
         mock_data (MockData): The mock data configuration.
+        base_factories (Sequence[Type[BaseFactory]] | None): The base factories to select from.
 
     Returns:
         Any: The generated model response.
     """
     if isinstance(model, GenericAlias) and issubclass(get_origin(model), Sequence):
-        return [get_model_factory(get_args(model)[0], mock_data)
+        return [get_model_factory(get_args(model)[0], mock_data, base_factories)
                 for _ in range(mock_data.element_size)]
 
     if isinstance(model, GenericAlias) and issubclass(get_origin(model), Mapping):
@@ -63,20 +69,25 @@ def get_model_response(model, mock_data: MockData):
 
         model_response = {}
         for key in keys:
-            model_response[key] = get_model_factory(value_type, mock_data)
+            model_response[key] = get_model_factory(value_type, mock_data, base_factories)
 
         return model_response
 
-    return get_model_factory(model, mock_data)
+    return get_model_factory(model, mock_data, base_factories)
 
 
-def get_model_factory(model, mock_data: MockData):
+def get_model_factory(
+        model,
+        mock_data: MockData,
+        base_factories: Optional[Sequence[Type[BaseFactory]]] = None
+):
     """
     Creates a factory for the provided model and generates mock data.
 
     Args:
         model: The model class to generate the factory for.
         mock_data (MockData): The mock data configuration.
+        base_factories (Sequence[Type[BaseFactory]] | None): The base factories to select from.
 
     Returns:
         Any: The generated model instance.
@@ -90,7 +101,7 @@ def get_model_factory(model, mock_data: MockData):
 
         raise Exception("Mock using model example but no example found for the API")
 
-    factory_class = get_mock_factory_class(model)
+    factory_class = get_mock_factory_class(model, base_factories)
 
     if factory_class:
         factory = factory_class.create_factory(
@@ -105,23 +116,6 @@ def get_model_factory(model, mock_data: MockData):
         return provider()
 
     raise ValueError(f'Cannot mock {model.response_model.__name__}')
-
-
-def get_mock_factory_class(response_model: Any) -> Optional[Type[BaseFactory]]:
-    """
-    Retrieves the appropriate factory class for the provided response model.
-
-    Args:
-        response_model (Any): The response model class.
-
-    Returns:
-        Optional[Type[BaseFactory]]: The factory class if found, else None.
-    """
-    for factory in BaseFactory.__subclasses__():
-        if factory.is_supported_type(response_model):
-            return factory
-
-    return None
 
 
 async def get_request_validation_errors(request: Request, api_route: APIRoute) -> list:
@@ -177,13 +171,18 @@ async def get_request_validation_errors(request: Request, api_route: APIRoute) -
     return errors
 
 
-async def get_response(request: Request, mock_data: MockData):
+async def get_response(
+        request: Request,
+        mock_data: MockData,
+        base_factories: Optional[Sequence[Type[BaseFactory]]] = None
+):
     """
     Generates a JSON response based on the matched route and mock data.
 
     Args:
         request (Request): The incoming HTTP request.
         mock_data (MockData): The mock data configuration.
+        base_factories (Sequence[Type[BaseFactory]] | None): The base factories to select from.
 
     Returns:
         JSONResponse: The generated JSON response.
@@ -212,7 +211,7 @@ async def get_response(request: Request, mock_data: MockData):
         raise Exception("Mock status code not defined in API declaration")
     api_response = api_route.responses[status_code]
 
-    response_model = get_model_response(api_response.get("model"), mock_data)
+    response_model = get_model_response(api_response.get("model"), mock_data, base_factories)
 
     return JSONResponse(status_code=status_code,
                         content=jsonable_encoder(response_model))
