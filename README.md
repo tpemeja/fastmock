@@ -62,6 +62,18 @@ $ pip install fastmock
 
 </div>
 
+Or, if you use [uv](https://docs.astral.sh/uv/):
+
+<div class="termy">
+
+```console
+$ uv add fastmock
+
+---> 100%
+```
+
+</div>
+
 ## Example
 
 ### Create it
