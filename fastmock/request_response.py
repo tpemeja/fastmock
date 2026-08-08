@@ -1,7 +1,6 @@
 import asyncio
 import json
 import random
-import re
 from types import GenericAlias
 from typing import Mapping, Optional, Sequence, get_args, get_origin, Type
 
@@ -11,6 +10,7 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from fastapi.routing import APIRoute
 from polyfactory import BaseFactory
+from starlette.routing import Match
 
 from fastmock.factories import get_mock_factory_class
 from fastmock.model import MockData
@@ -20,6 +20,10 @@ def get_matched_route(request: Request) -> APIRoute | None:
     """
     Matches the request to a defined APIRoute in the FastAPI application.
 
+    Delegates to Starlette's own route matching rather than approximating it, so that path
+    converters such as {item_id:int} and {file_path:path} resolve the way they would during real
+    routing.
+
     Args:
         request (Request): The incoming HTTP request.
 
@@ -28,15 +32,31 @@ def get_matched_route(request: Request) -> APIRoute | None:
     """
     for route in request["app"].routes:
         if isinstance(route, APIRoute):
-            # Convert route path to regex pattern
-            route_pattern = re.sub(r"{\w+}", r"[^/]+", route.path)
-            route_pattern = f"^{route_pattern}$"
-
-            # Check if requested path matches the regex pattern of the route
-            if re.match(route_pattern, request["path"]) and request["method"] in route.methods:
+            match, _ = route.matches(request.scope)
+            if match == Match.FULL:
                 return route
 
     return None
+
+
+def get_path_params(request: Request, api_route: APIRoute) -> dict:
+    """
+    Resolves the request's path parameters against a route.
+
+    Middleware runs before Starlette's router, so request.path_params is still empty at this
+    point. Without resolving them here, every route declaring a path parameter would be reported
+    as missing it.
+
+    Args:
+        request (Request): The incoming HTTP request.
+        api_route (APIRoute): The matched route.
+
+    Returns:
+        dict: The path parameters, keyed by name.
+    """
+    _, child_scope = api_route.matches(request.scope)
+
+    return child_scope.get("path_params", {})
 
 
 def get_model_response(
@@ -137,7 +157,7 @@ async def get_request_validation_errors(request: Request, api_route: APIRoute) -
     errors = []
 
     for fields, received in (
-        (dependant.path_params, request.path_params),
+        (dependant.path_params, get_path_params(request, api_route)),
         (dependant.query_params, request.query_params),
         (dependant.header_params, request.headers),
         (dependant.cookie_params, request.cookies),
