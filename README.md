@@ -31,6 +31,7 @@ Key features of this project include:
 - **Ease of Use**: Simply add the middleware to start mocking your APIs.
 - **Flexibility**: Mocking can be customized through various parameters, such as activation, data generation, length, status codes, and more.
 - **Modularity**: The package includes default functions to retrieve mocking parameters from API declarations to request headers. However, all these functions can be modified, allowing you to create your own custom functions.
+- **Fault Injection**: Simulate latency and failures per-route or via request header, so you can test how your client handles a slow or unreliable API without writing any extra code.
 
 ## Requirements
 
@@ -149,6 +150,23 @@ You just created an API using FastAPI that:
 * Return value generated from defined response model
 * Modify output list size using decorator
 
+
+## How does this compare to other FastAPI mocking libraries?
+
+A couple of other projects cover similar ground. Here's how fastmock differs:
+
+|                                                | fastmock | [fastapi-mock](https://github.com/dantetemplar/fastapi-mock) | [fastapi-mock-middleware](https://github.com/NiyazNz/fastapi-mock-middleware) |
+|------------------------------------------------|:--------:|:--------------------------------------------------------------:|:---------------------------------------------------------------------------:|
+| Trigger                                        | Decorator / middleware config | `raise NotImplementedError()`, or catches a 500 | Middleware, per unimplemented route |
+| Per-route status code override                 | ✅ | – | – |
+| Runtime overrides via request headers           | ✅ | – | – |
+| Configurable data retrieval precedence chain    | ✅ | – | – |
+| Multiple examples, randomly chosen              | – | ✅ | – |
+| Fault injection (delay / failure rate)          | ✅ | – | – |
+| Pydantic 2                                      | ✅ | ✅ | – |
+| Actively maintained                             | ✅ | ✅ | ❌ (last commit 2024) |
+
+`fastapi-mock` is a great fit if you want the absolute lowest-friction way to stub an endpoint you haven't implemented yet — no decorator, no config, just raise `NotImplementedError()`. fastmock trades a little more setup for per-route and per-request control over data shape, status codes, and failure modes, which matters once you're mocking for QA, staging, or demo environments rather than just a placeholder.
 
 ## Inspiration
 
