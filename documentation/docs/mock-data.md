@@ -143,14 +143,14 @@ Set `validate_request=False` to disable this and go back to accepting any reques
 By default, a mocked response is a **pure function of the request**. The same method, path, query string and body always produce the same data — across page refreshes, server restarts and machines.
 
 ```console
-$ curl http://127.0.0.1:8000/items/1
-{"name": "Kimberly Ortiz", "price": 42.51, "is_offer": null}
+$ curl http://127.0.0.1:8000/customers/1
+{"first_name": "Patricia", "last_name": "Burgess", "city": "New Erichaven", "country": "Paraguay", "is_active": null}
 
-$ curl http://127.0.0.1:8000/items/1   # same request, same data
-{"name": "Kimberly Ortiz", "price": 42.51, "is_offer": null}
+$ curl http://127.0.0.1:8000/customers/1   # same request, same data
+{"first_name": "Patricia", "last_name": "Burgess", "city": "New Erichaven", "country": "Paraguay", "is_active": null}
 
-$ curl http://127.0.0.1:8000/items/2   # different resource, different data
-{"name": "Alan Weber", "price": 8.02, "is_offer": true}
+$ curl http://127.0.0.1:8000/customers/2   # different resource, different data
+{"first_name": "Tyler", "last_name": "Weber", "city": "New Melissaburgh", "country": "Trinidad and Tobago", "is_active": null}
 ```
 
 This is what makes generated data usable beyond a placeholder: a demo doesn't reshuffle every time someone refreshes, an integration test can assert on a literal payload, and a colleague reproducing a bug sees the values you saw.

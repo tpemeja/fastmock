@@ -83,7 +83,7 @@ $ uv add fastmock
 ### Create it
 
 * Create a file `main.py` with:
-```Python hl_lines="4-5  8  11  28"
+```Python hl_lines="4-5  8  11  30"
 from fastapi import FastAPI, status
 from pydantic import BaseModel
 
@@ -96,10 +96,12 @@ app.add_middleware(FastMockMiddleware)
 
 mock = FastMockDecorator()
 
-class Item(BaseModel):
-    name: str
-    price: float
-    is_offer: bool | None = None
+class Customer(BaseModel):
+    first_name: str
+    last_name: str
+    city: str
+    country: str
+    is_active: bool | None = None
 
 
 @app.get("/",
@@ -112,38 +114,44 @@ def read_root():
 
 
 @mock(element_size=3)
-@app.get("/items",
+@app.get("/customers",
          status_code=status.HTTP_200_OK,
          responses={
-             status.HTTP_200_OK: {"model": list[Item]}
+             status.HTTP_200_OK: {"model": list[Customer]}
          })
-def read_items():
+def read_customers():
     return []
 ```
 
 * Start the server with `uvicorn main:app` 
 ### Check it
 
-Open your browser at <a href="http://127.0.0.1:8000/items" class="external-link" target="_blank">http://127.0.0.1:8000/items</a>.
+Open your browser at <a href="http://127.0.0.1:8000/customers" class="external-link" target="_blank">http://127.0.0.1:8000/customers</a>.
 
 You will see the JSON response as:
 
 ```JSON
 [
   {
-    "name": "fdYLIZjVsRwVvCGsiRtM",
-    "price": 2745.57252578917,
-    "is_offer": null
+    "first_name": "Robert",
+    "last_name": "Foster",
+    "city": "Reynoldsfurt",
+    "country": "Luxembourg",
+    "is_active": null
   },
   {
-    "name": "CNNXlfhuumgLhcbhixfa",
-    "price": 96.966419251723,
-    "is_offer": null
+    "first_name": "Morgan",
+    "last_name": "Wong",
+    "city": "Charlesborough",
+    "country": "Grenada",
+    "is_active": null
   },
   {
-    "name": "vrSOxrckaSxyKiYTFbSr",
-    "price": 64569428.1966292,
-    "is_offer": null
+    "first_name": "Maureen",
+    "last_name": "Dodson",
+    "city": "Cookhaven",
+    "country": "Swaziland",
+    "is_active": null
   }
 ]
 ```
@@ -153,6 +161,7 @@ Refresh the page and you will see exactly the same response: mock data is reprod
 You just created an API using FastAPI that:
 
 * Return value generated from defined response model
+* Generate values that match what the field names mean, not just their types
 * Modify output list size using decorator
 * Return the same data for the same request, every time
 

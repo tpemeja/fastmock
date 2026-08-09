@@ -10,7 +10,7 @@ You can use the decorator to describe the mocking behavior for specific APIs. Th
 
 To utilize the decorator, initialize it and apply it to your API endpoint as shown in the following example:
 
-```python hl_lines="4  10  17"
+```python hl_lines="4  10  19"
 from fastapi import FastAPI, status
 from pydantic import BaseModel
 
@@ -22,18 +22,20 @@ app.add_middleware(FastMockMiddleware)
 
 mock = FastMockDecorator()
 
-class Item(BaseModel):
-    name: str
-    price: float
-    is_offer: bool | None = None
+class Customer(BaseModel):
+    first_name: str
+    last_name: str
+    city: str
+    country: str
+    is_active: bool | None = None
 
 @mock(element_size=3)
-@app.get("/items",
+@app.get("/customers",
          status_code=status.HTTP_200_OK,
          responses={
-             status.HTTP_200_OK: {"model": list[Item]}
+             status.HTTP_200_OK: {"model": list[Customer]}
          })
-def read_items():
+def read_customers():
     return []
 ```
 
@@ -44,7 +46,7 @@ You can override the default middleware parameters using request headers.
 Each parameter can be overridden by using the `X-FASTMOCK-<PARAMETER>` format.
 For example, to set the element size of the API output to 3, you can send the header `X-FASTMOCK-ELEMENT-SIZE: 3` as shown below:
 ```
-curl -H "X-FASTMOCK-ELEMENT-SIZE: 3" http://127.0.0.1:8000/items
+curl -H "X-FASTMOCK-ELEMENT-SIZE: 3" http://127.0.0.1:8000/customers
 ```
 
 Note that `factory` is the one parameter without a header equivalent, since a header can only carry text.
