@@ -170,6 +170,8 @@ Set `seed=None` to generate fresh data on every request instead.
 
 Form and multipart bodies are excluded from the seed, since upload boundaries would make it unstable, and only the first 64KB of any body contributes.
 
+Temporal fields are covered by this too. `datetime`, `date`, `time` and `timedelta` values are drawn from a fixed window rather than relative to the current clock, so a timestamp generated today is the same one you get next week. Without that, a seed would only fix the *offset* from "now" and every timestamp would quietly drift between runs.
+
 ## Custom Factories
 
 fastmock generates data that is plausible **field by field**. It does not infer relationships *between* fields — that a `total` should equal the sum of its line items, or that a `tracking_number` should be present exactly when `status` is `"shipped"`. Those invariants live in your domain, not in the schema.

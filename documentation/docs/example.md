@@ -491,11 +491,10 @@ thirteen `200`s and seven `503`s; another gave nineteen and one. That variation 
 **fault injection stays genuinely random even though payloads are deterministic**, so you can
 exercise retry and error-handling logic that a fixed outcome would never reach.
 
-!!! note "Reproducibility and time"
-    Seeding fixes every generated value except `datetime` and `date` fields, which are produced
-    relative to the current clock and therefore drift between runs. Two identical requests a
-    minute apart return the same names, prices and identifiers, but timestamps that differ by
-    about a minute. Pin them with a custom factory if a test needs to assert on them.
+!!! note "Timestamps are stable too"
+    `datetime`, `date`, `time` and `timedelta` values are drawn from a fixed window rather than
+    from the current clock, so they are as reproducible as every other field. Two identical
+    requests a week apart return the same timestamp.
 
 ## What this replaces
 

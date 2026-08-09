@@ -7,6 +7,7 @@ than discovering them dynamically, so that factory selection is deterministic an
 which polyfactory submodules happen to have been imported.
 """
 
+from datetime import date, datetime, time, timedelta
 from types import UnionType
 from typing import Annotated, Any, Callable, Mapping, Optional, Sequence, Type, Union, get_args, \
     get_origin
@@ -122,7 +123,48 @@ def is_compatible(value: Any, annotation: Any) -> bool:
     return resolved is not None and type(value) is resolved  # pylint: disable=unidiomatic-typecheck
 
 
-class NameAwareFactoryMixin:
+#: Absolute window that seeded temporal values are drawn from.
+#:
+#: Polyfactory's temporal providers are all relative to the current clock -- datetime spans
+#: "-30y" to "now", date is bounded by today, and time and timedelta are measured from now. A
+#: seed therefore fixes the *offset* rather than the value, so timestamps drift between runs even
+#: though every other field is stable. Anchoring the window to fixed dates makes them reproducible
+#: like everything else.
+SEEDED_PERIOD_START = datetime(2000, 1, 1)
+SEEDED_PERIOD_END = datetime(2035, 1, 1)
+
+
+class StableTemporalFactoryMixin:  # pylint: disable=too-few-public-methods
+    """
+    Draws temporal values from a fixed window instead of one anchored to the current clock.
+
+    Without this, two identical requests a minute apart return timestamps a minute apart, which
+    contradicts the guarantee that a response is a pure function of the request.
+    """
+
+    @classmethod
+    def get_provider_map(cls) -> dict:
+        """
+        Replaces polyfactory's clock-relative temporal providers with absolute-window ones.
+
+        Returns:
+            dict: The provider map, with datetime, date, time and timedelta overridden.
+        """
+        provider_map = super().get_provider_map()
+
+        provider_map[datetime] = lambda: cls.__faker__.date_time_between(
+            start_date=SEEDED_PERIOD_START, end_date=SEEDED_PERIOD_END)
+        provider_map[date] = lambda: cls.__faker__.date_between_dates(
+            date_start=SEEDED_PERIOD_START.date(), date_end=SEEDED_PERIOD_END.date())
+        provider_map[time] = lambda: cls.__faker__.date_time_between(
+            start_date=SEEDED_PERIOD_START, end_date=SEEDED_PERIOD_END).time()
+        provider_map[timedelta] = lambda: timedelta(
+            seconds=cls.__faker__.pyint(min_value=0, max_value=365 * 24 * 3600))
+
+        return provider_map
+
+
+class NameAwareFactoryMixin:  # pylint: disable=too-few-public-methods
     """
     Resolves field values from a name-based provider map before falling back to polyfactory.
 
@@ -136,6 +178,17 @@ class NameAwareFactoryMixin:
 
     @classmethod
     def get_field_value(cls, field_meta, field_build_parameters=None, build_context=None):
+        """
+        Resolves a field from the name-based provider map, falling back to polyfactory.
+
+        Args:
+            field_meta: Polyfactory's metadata for the field being built.
+            field_build_parameters: Build parameters passed down for this field.
+            build_context: Polyfactory's build context.
+
+        Returns:
+            Any: The generated value.
+        """
         provider = cls.__provider_map__.get(field_meta.name)
 
         if provider is not None:
@@ -171,8 +224,8 @@ def build_base_factories(
 
     return tuple(
         type(
-            f"NameAware{base.__name__}",
-            (NameAwareFactoryMixin, base),
+            f"FastMock{base.__name__}",
+            (NameAwareFactoryMixin, StableTemporalFactoryMixin, base),
             {"__is_base_factory__": True, "__provider_map__": merged},
         )
         for base in DEFAULT_BASE_FACTORIES
