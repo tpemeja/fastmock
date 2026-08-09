@@ -215,8 +215,71 @@ $ curl -X POST http://127.0.0.1:8000/orders \
 
 ## Driving the mock from the client side
 
-Any scalar setting can be overridden per request with an `X-FASTMOCK-` header, which means your
-frontend can exercise an error path without anyone touching the server:
+Every scalar setting can be overridden **per request** with a header. The rule is
+`X-FASTMOCK-<PARAMETER>`, with dashes standing in for underscores — `element_size` becomes
+`X-FASTMOCK-ELEMENT-SIZE`. Matching is case-insensitive.
+
+Headers sit at the top of the precedence chain, so they beat the decorator *and* the middleware
+configuration. That means a frontend developer can reshape the API from the client side without
+anyone restarting a server or editing Python.
+
+| Header | Effect |
+| --- | --- |
+| `X-FASTMOCK-ELEMENT-SIZE` | How many items a list response contains |
+| `X-FASTMOCK-SEED` | Switch to a different, equally stable data set |
+| `X-FASTMOCK-RESPONSE-STATUS-CODE` | Return a specific declared response |
+| `X-FASTMOCK-DELAY` | Add or remove latency |
+| `X-FASTMOCK-FAIL-RATE` | Force or suppress failures |
+| `X-FASTMOCK-TYPE` | Switch between `default`, `example` and `generated` |
+| `X-FASTMOCK-VALIDATE-REQUEST` | Turn request validation off |
+| `X-FASTMOCK-ACTIVATE` | Turn mocking off entirely for this request |
+
+### Ask for more rows
+
+```console
+$ curl -H "X-FASTMOCK-ELEMENT-SIZE: 5" http://127.0.0.1:8000/customers
+```
+
+```
+Oscar, Joseph, Jasmine, Lisa, Patricia
+```
+
+The baseline response was `Oscar, Joseph`. Asking for five did not reshuffle anything — it
+extended the same sequence, because the seed depends on the request, not on how much of the
+result you asked for.
+
+### Switch to a different data set
+
+```console
+$ curl -H "X-FASTMOCK-SEED: 99" http://127.0.0.1:8000/customers
+```
+
+```json
+[
+  {
+    "customer_id": "46b32ea5-21f2-418f-bcd7-0b6e1503afbe",
+    "first_name": "Tiffany",
+    "last_name": "Romero",
+    "email": "amber56@gmail.com",
+    "city": "South Jenny",
+    "country": "Djibouti"
+  },
+  {
+    "customer_id": "645cb376-e384-43cc-9744-a4928d75a69b",
+    "first_name": "Christina",
+    "last_name": "Mendoza",
+    "email": "bthomas@gmail.com",
+    "city": "Johnsonbury",
+    "country": "China"
+  }
+]
+```
+
+Different people, but just as stable: send that header again and Tiffany and Christina come back.
+This is how you keep several fixed data sets on hand — one per seed — without configuring any of
+them in advance.
+
+### Exercise an error path
 
 ```console
 $ curl -H "X-FASTMOCK-RESPONSE-STATUS-CODE: 404" \
@@ -229,6 +292,46 @@ $ curl -H "X-FASTMOCK-RESPONSE-STATUS-CODE: 404" \
 
 That message is not random. `CustomerNotFound.message` declares a default, and the `default`
 generation type returns field defaults verbatim — so error payloads read like real ones.
+
+### Override what the decorator asked for
+
+`/inventory/{sku}` is decorated with `delay=0.3, fail_rate=0.3`. Headers outrank that, so you can
+force the failure you want to test instead of retrying until chance delivers it:
+
+```console
+$ curl -H "X-FASTMOCK-FAIL-RATE: 1" -H "X-FASTMOCK-DELAY: 0" \
+       http://127.0.0.1:8000/inventory/ABC-1234
+```
+
+```json
+{"message": "Inventory service unavailable"}
+```
+
+Returned as `503`, instantly — the declared 300ms wait drops to under a millisecond. The same
+works in reverse: `X-FASTMOCK-FAIL-RATE: 0` gives you a reliable endpoint while you work on
+something else.
+
+### Skip validation, or stop mocking altogether
+
+`X-FASTMOCK-VALIDATE-REQUEST: false` accepts a body that would otherwise be rejected, which is
+useful while a client is still being written:
+
+```console
+$ curl -X POST -H "X-FASTMOCK-VALIDATE-REQUEST: false" \
+       -H 'content-type: application/json' \
+       -d '{"customer_id": "nope", "line_items": []}' \
+       http://127.0.0.1:8000/orders
+```
+
+Returns `201` with a generated order rather than the `422` shown earlier.
+
+`X-FASTMOCK-ACTIVATE: false` goes further and takes fastmock out of the way entirely, so the
+request reaches your real handler. On this example that returns `[]`, since `list_customers` has
+an empty body — which is a quick way to check which endpoints are genuinely implemented yet.
+
+!!! note "One parameter has no header"
+    `factory` is a callable, and a header can only carry text. It is the single setting that must
+    be applied through the decorator or the middleware.
 
 ## Latency and failure
 

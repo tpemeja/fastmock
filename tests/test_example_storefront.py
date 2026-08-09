@@ -89,6 +89,52 @@ def test_status_code_override_returns_the_default_message(client):
     assert response.json() == {"message": "Customer not found"}
 
 
+def test_element_size_header_extends_rather_than_reshuffles(client):
+    """The documented Oscar, Joseph, Jasmine, Lisa, Patricia sequence."""
+    baseline = [c["first_name"] for c in client.get("/customers").json()]
+    larger = [c["first_name"] for c in
+              client.get("/customers", headers={"X-FASTMOCK-ELEMENT-SIZE": "5"}).json()]
+
+    assert baseline == ["Oscar", "Joseph"]
+    assert larger == ["Oscar", "Joseph", "Jasmine", "Lisa", "Patricia"]
+    assert larger[:len(baseline)] == baseline
+
+
+def test_seed_header_selects_a_different_stable_data_set(client):
+    headers = {"X-FASTMOCK-SEED": "99"}
+    body = client.get("/customers", headers=headers).json()
+
+    assert [c["first_name"] for c in body] == ["Tiffany", "Christina"]
+    assert body == client.get("/customers", headers=headers).json()
+    assert body != client.get("/customers").json()
+
+
+def test_headers_outrank_the_decorator(client):
+    """/inventory declares fail_rate=0.3; the header forces every call to fail."""
+    responses = [client.get("/inventory/ABC-1234",
+                            headers={"X-FASTMOCK-FAIL-RATE": "1", "X-FASTMOCK-DELAY": "0"})
+                 for _ in range(10)]
+
+    assert {r.status_code for r in responses} == {503}
+    assert responses[0].json() == {"message": "Inventory service unavailable"}
+
+
+def test_validation_can_be_disabled_per_request(client):
+    response = client.post("/orders",
+                           headers={"X-FASTMOCK-VALIDATE-REQUEST": "false"},
+                           json={"customer_id": "nope", "line_items": []})
+
+    assert response.status_code == 201
+
+
+def test_mocking_can_be_disabled_per_request(client):
+    """With mocking off the real handler runs, and list_customers has an empty body."""
+    response = client.get("/customers", headers={"X-FASTMOCK-ACTIVATE": "false"})
+
+    assert response.status_code == 200
+    assert response.json() == []
+
+
 def test_inventory_is_flaky(client):
     # The route declares delay=0.3; override it so 60 samples do not cost 18 seconds.
     statuses = {client.get("/inventory/ABC-1234",
