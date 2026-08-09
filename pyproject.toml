@@ -62,6 +62,9 @@ test = [
 lint = [
     "pylint",
 ]
+examples = [
+    "uvicorn",
+]
 docs = [
     "mkdocs",
     "mkdocs-material",
@@ -70,6 +73,7 @@ dev = [
     { include-group = "test" },
     { include-group = "lint" },
     { include-group = "docs" },
+    { include-group = "examples" },
 ]
 
 [tool.hatch.build.targets.wheel]

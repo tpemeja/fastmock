@@ -4,11 +4,18 @@ This page walks through a storefront API that is **entirely mocked**. Every endp
 body, there is no database, and no dependency is ever called — yet the API answers with plausible,
 reproducible data, validates incoming requests, and can be made slow or unreliable on demand.
 
-The full source is at [`examples/storefront.py`](https://github.com/tpemeja/fastmock/blob/main/examples/storefront.py). Run it with:
+The full source is at [`examples/storefront.py`](https://github.com/tpemeja/fastmock/blob/main/examples/storefront.py). Run it from the repository root with:
 
 ```console
-$ uvicorn examples.storefront:app --reload
+$ uv sync --group examples
+$ uv run uvicorn examples.storefront:app --reload
 ```
+
+!!! tip "Use `uv run`"
+    A bare `uvicorn` can resolve to a system-wide install even with the project virtualenv
+    activated, because `PATH` finds that copy first. It then runs under a different interpreter
+    and fails with `ModuleNotFoundError: No module named 'polyfactory'`. `uv run` always uses the
+    project environment.
 
 ## The setup
 

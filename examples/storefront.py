@@ -5,9 +5,13 @@ Every endpoint below has an empty body. Nothing is implemented, there is no data
 dependency is ever called -- yet the API answers with plausible, reproducible data, validates
 incoming requests, and can be made slow or unreliable on demand.
 
-Run it with:
+Run it from the repository root with:
 
-    uvicorn examples.storefront:app --reload
+    uv sync --group examples
+    uv run uvicorn examples.storefront:app --reload
+
+Use `uv run` rather than a bare `uvicorn`: activating the virtualenv is not enough if uvicorn is
+also installed system-wide, since PATH may resolve to that copy and its unrelated interpreter.
 """
 
 from datetime import datetime
