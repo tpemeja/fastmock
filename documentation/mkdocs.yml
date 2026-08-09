@@ -36,6 +36,7 @@ repo_url: https://github.com/tpemeja/fastmock
 
 nav:
 - Overview: 'index.md'
+- Example: 'example.md'
 - Mock Data: 'mock-data.md'
 - Middleware: 'middleware.md'
 - Roadmap: 'roadmap.md'
