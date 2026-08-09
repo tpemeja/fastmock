@@ -333,6 +333,145 @@ an empty body — which is a quick way to check which endpoints are genuinely im
     `factory` is a callable, and a header can only carry text. It is the single setting that must
     be applied through the decorator or the middleware.
 
+## Choosing how values are generated
+
+`type` selects where a value comes from, and the three modes answer different needs.
+
+**`default`** — the default — honours field defaults. That is why the `404` above reads
+`{"message": "Customer not found"}`: `CustomerNotFound.message` declares that default, and it is
+returned verbatim.
+
+**`generated`** ignores defaults and generates everything, which is how you check that a client
+does not quietly depend on a default:
+
+```console
+$ curl -H "X-FASTMOCK-RESPONSE-STATUS-CODE: 404" -H "X-FASTMOCK-TYPE: generated" \
+       http://127.0.0.1:8000/customers/3fa85f64-5717-4562-b3fc-2c963f66afa6
+```
+
+```json
+{"message": "ViooIuwICvLeOqKnuUUQ"}
+```
+
+**`example`** returns a hand-written payload from the model's `json_schema_extra`, for when a
+screenshot or an assertion needs one specific set of values:
+
+```python
+class Customer(BaseModel):
+    ...
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "customer_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                "first_name": "Ada",
+                "last_name": "Lovelace",
+                "email": "ada@example.com",
+                "city": "London",
+                "country": "United Kingdom",
+            }
+        }
+    }
+```
+
+```console
+$ curl -H "X-FASTMOCK-TYPE: example" \
+       http://127.0.0.1:8000/customers/3fa85f64-5717-4562-b3fc-2c963f66afa6
+```
+
+```json
+{
+  "customer_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "first_name": "Ada",
+  "last_name": "Lovelace",
+  "email": "ada@example.com",
+  "city": "London",
+  "country": "United Kingdom"
+}
+```
+
+The example lives in the schema, so it also shows up in your OpenAPI docs — it is documentation
+and mock data at once, rather than a fixture file that drifts out of sync.
+
+## Teaching fastmock your own vocabulary
+
+Headers are flexible but low-level: reproducing "the empty state, but slow" means remembering
+which combination to send. `retrieve_data_function_list` lets you add your own source of settings.
+
+A retrieval function is a plain callable that takes the request and returns a dict of `MockData`
+fields. Returning an empty dict means "no opinion". Here one expands a `?scenario=` parameter
+into a bundle:
+
+```python
+SCENARIOS = {
+    "empty": {"element_size": 0},
+    "bulk": {"element_size": 25},
+    "slow": {"delay": 1.5},
+    "alt": {"seed": 99},
+}
+
+
+def get_data_from_scenario(request: Request) -> dict:
+    return SCENARIOS.get(request.query_params.get("scenario", ""), {})
+
+
+app.add_middleware(
+    FastMockMiddleware,
+    retrieve_data_function_list=[
+        get_data_from_decorator_route,
+        get_data_from_scenario,
+        get_data_from_header,
+    ],
+)
+```
+
+```console
+$ curl "http://127.0.0.1:8000/customers?scenario=empty"   # []            - empty-state UI
+$ curl "http://127.0.0.1:8000/customers?scenario=bulk"    # 25 customers  - pagination, overflow
+$ curl "http://127.0.0.1:8000/customers?scenario=slow"    # 1.5s          - spinners, timeouts
+$ curl "http://127.0.0.1:8000/customers?scenario=alt"     # different people
+```
+
+Now a bug report can say *"open `?scenario=bulk`"* instead of listing headers. The same hook can
+read settings from a cookie, a JWT claim, or a per-tenant config — anywhere a request carries
+information you want to mock by.
+
+!!! note "Query strings feed the seed"
+    `?scenario=alt` sets `seed=99`, but its data differs from sending `X-FASTMOCK-SEED: 99` with
+    no query string, because the query string is itself part of the seed. Both are perfectly
+    stable; they are simply two different stable data sets.
+
+## Where settings come from
+
+Four sources are consulted in order, each overriding the last:
+
+| # | Source | Scope |
+| --- | --- | --- |
+| 1 | `FastMockMiddleware(mock_data=...)` | Every route |
+| 2 | `FastMockDecorator(...)` | Every route using that decorator |
+| 3 | `@mock(...)` on a route | That route |
+| 4 | `X-FASTMOCK-` headers | That request |
+
+The example inserts scenarios between 3 and 4, so a header still has the final say — which is why
+`?scenario=bulk` with `X-FASTMOCK-ELEMENT-SIZE: 2` returns two customers, not twenty-five.
+
+Level 2 is easy to overlook. `mock = FastMockDecorator(validate_request=True)` sets a house style
+once, and every `@mock` route inherits it:
+
+```python
+mock = FastMockDecorator(validate_request=True)
+
+@mock(factory=OrderFactory, element_size=3)   # inherits validate_request
+@app.get("/orders", ...)
+def list_orders():
+    return []
+```
+
+!!! warning "The decorator carries a full MockData"
+    A decorated route supplies *every* field, not only the ones you named — so its defaults
+    override the middleware. If `@mock(factory=...)` sits on a route, that route uses the
+    decorator's `element_size`, not the middleware's. Set the value on the decorator, or override
+    it per request with a header.
+
 ## Latency and failure
 
 ```python

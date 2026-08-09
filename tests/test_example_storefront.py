@@ -135,6 +135,68 @@ def test_mocking_can_be_disabled_per_request(client):
     assert response.json() == []
 
 
+def test_example_generation_type_returns_the_schema_example(client):
+    body = client.get(f"/customers/{CUSTOMER_ID}",
+                      headers={"X-FASTMOCK-TYPE": "example"}).json()
+
+    assert body == {
+        "customer_id": CUSTOMER_ID,
+        "first_name": "Ada",
+        "last_name": "Lovelace",
+        "email": "ada@example.com",
+        "city": "London",
+        "country": "United Kingdom",
+    }
+
+
+def test_generated_type_ignores_field_defaults(client):
+    headers = {"X-FASTMOCK-RESPONSE-STATUS-CODE": "404"}
+
+    assert client.get(f"/customers/{CUSTOMER_ID}", headers=headers).json() == {
+        "message": "Customer not found"}
+
+    generated = client.get(f"/customers/{CUSTOMER_ID}",
+                           headers={**headers, "X-FASTMOCK-TYPE": "generated"}).json()
+    assert generated["message"] != "Customer not found"
+
+
+@pytest.mark.parametrize("scenario, expected_size", [
+    ("empty", 0),
+    ("bulk", 25),
+])
+def test_scenario_expands_into_settings(client, scenario, expected_size):
+    assert len(client.get(f"/customers?scenario={scenario}").json()) == expected_size
+
+
+def test_unknown_scenario_has_no_opinion(client):
+    """An empty dict from a retrieval function must leave earlier sources untouched."""
+    body = client.get("/customers?scenario=nonsense").json()
+
+    assert len(body) == 2
+
+
+def test_scenario_alt_is_stable_and_distinct(client):
+    body = client.get("/customers?scenario=alt").json()
+
+    assert body == client.get("/customers?scenario=alt").json()
+    assert body != client.get("/customers").json()
+
+
+def test_headers_outrank_scenarios(client):
+    """Scenarios sit below headers in the retrieval order."""
+    body = client.get("/customers?scenario=bulk",
+                      headers={"X-FASTMOCK-ELEMENT-SIZE": "2"}).json()
+
+    assert len(body) == 2
+
+
+def test_scenario_slow_applies_a_delay(client):
+    start = time.perf_counter()
+    client.get("/customers?scenario=slow")
+
+    assert time.perf_counter() - start >= 1.5
+
+
 def test_inventory_is_flaky(client):
     # The route declares delay=0.3; override it so 60 samples do not cost 18 seconds.
     statuses = {client.get("/inventory/ABC-1234",

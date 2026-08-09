@@ -18,12 +18,13 @@ from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
-from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi import Depends, FastAPI, HTTPException, Request, status
 from polyfactory.factories.pydantic_factory import ModelFactory
 from pydantic import BaseModel, EmailStr, Field
 
 from fastmock.decorator import FastMockDecorator
 from fastmock.middleware import FastMockMiddleware
+from fastmock.tools import get_data_from_decorator_route, get_data_from_header
 
 
 class Customer(BaseModel):
@@ -33,6 +34,21 @@ class Customer(BaseModel):
     email: EmailStr
     city: str
     country: str
+
+    # Returned verbatim under the `example` generation type, for when a screenshot or a test
+    # needs one specific, hand-chosen payload.
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "customer_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                "first_name": "Ada",
+                "last_name": "Lovelace",
+                "email": "ada@example.com",
+                "city": "London",
+                "country": "United Kingdom",
+            }
+        }
+    }
 
 
 class LineItem(BaseModel):
@@ -90,13 +106,41 @@ def get_current_user() -> dict:
     raise RuntimeError("this dependency must never run while mocking")
 
 
+#: Named bundles of settings, so a tester can reach a whole situation with one query parameter
+#: instead of remembering which combination of headers produces it.
+SCENARIOS = {
+    "empty": {"element_size": 0},
+    "bulk": {"element_size": 25},
+    "slow": {"delay": 1.5},
+    "alt": {"seed": 99},
+}
+
+
+def get_data_from_scenario(request: Request) -> dict:
+    """
+    A custom retrieval function: reads `?scenario=` and expands it into mock settings.
+
+    Retrieval functions are plain callables taking the request and returning a dict of MockData
+    fields. Returning an empty dict means "no opinion", leaving earlier sources untouched.
+    """
+    return SCENARIOS.get(request.query_params.get("scenario", ""), {})
+
+
 app = FastAPI(title="Storefront")
 app.add_middleware(
     FastMockMiddleware,
     provider_map={"sku": lambda faker: faker.bothify("???-####").upper()},
+    # Ordered least to most important. Slotting scenarios between the decorator and the header
+    # keeps headers as the final say.
+    retrieve_data_function_list=[
+        get_data_from_decorator_route,
+        get_data_from_scenario,
+        get_data_from_header,
+    ],
 )
 
-mock = FastMockDecorator()
+#: Defaults shared by every decorated route, overridable per route and per request.
+mock = FastMockDecorator(validate_request=True)
 
 
 @app.get("/customers",
